@@ -1,4 +1,4 @@
-pragma solidity ^0.4.25;
+pragma solidity ^0.4.24;
 
 contract IBridgeContract {
   function setExitStake(uint256 _exitStake) public;

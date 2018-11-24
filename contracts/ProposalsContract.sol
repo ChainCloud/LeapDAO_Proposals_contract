@@ -1,14 +1,14 @@
-pragma solidity ^0.4.22;
+pragma solidity ^0.4.24;
 
 import "./PreserveBalancesOnTransferToken.sol";
 import "./SnapshotToken.sol";
 
 import "./IBridgeContract.sol";
 
+
 // See https://github.com/leapdao/leap-contracts/blob/master/contracts/LeapBridge.sol
 // _bridgeContract should call transferOwnership() to THIS contract!!!
-
-contract ProosalsContract {
+contract ProposalsContract {
 	IBridgeContract bridgeContract;
 	PreserveBalancesOnTransferToken token;
 
@@ -17,15 +17,19 @@ contract ProosalsContract {
 
 	event VotingStarted(string _type, uint _param, address _byWhom);
 
+	enum VotingType {
+		SetExitStake,
+		SetEpochLength
+	}
+
 	struct Voting {
 		address startedBy;
-		string votingType;
+		VotingType votingType;
 		uint param;
 		SnapshotToken snapshot;
-
 		uint pro;
 		uint versus;
-	};
+	}
 
 	uint votingCount;
 	mapping(uint=>Voting) votings; // votingNumber => voting
@@ -37,25 +41,25 @@ contract ProosalsContract {
 
 	function setExitStake(uint256 _exitStake) public {
 		votings[votingCount] = Voting(
-			token.createNewSnapshot(),
-			msg.sender,
-			"setExitStake",
-			_exitStake,
-			0,
-			0);
+			msg.sender,       // startedBy
+			VotingType.SetExitStake,   // votingType
+			_exitStake,       // param
+			token.createNewSnapshot(), // snapshot
+			0, 			   // pro
+			0); 			   // versus
 		votingCount++;
 
 		VotingStarted("setExitStake", _exitStake, msg.sender);
 	}
 
 	function setEpochLength(uint256 _epochLength) public {
-		votings[votingCount] = Voting(
-			token.createNewSnapshot(),
-			msg.sender,
-			"setEpochLength",
-			_exitStake,
-			0,
-			0);
+		votings[votingCount] = Voting(		
+			msg.sender,       // startedBy
+			VotingType.SetEpochLength, // votingType
+			_epochLength,     // param
+			token.createNewSnapshot(), // snapshot
+			0, 			   // pro
+			0); 			   // versus
 		votingCount++;
 
 		VotingStarted("setEpochLength", _epochLength, msg.sender);
@@ -66,55 +70,53 @@ contract ProosalsContract {
 	}
 
 	// TODO: add more vars in returns()?
-	function getVoting(uint _i) public view returns(string paramName, uint value, uint dateStarted, address startedBy) {
-		paramName	  = votings[_i].paramName;
-		value 	  = votings[_i].value;
-		dateStarted = votings[_i].dateStarted;
+	function getVoting(uint _i) public view returns(VotingType votingType, uint paramValue, address startedBy) {
+		votingType	  = votings[_i].votingType;
+		paramValue  = votings[_i].param;
 		startedBy   = votings[_i].startedBy;
+
 	}
 
 	// TODO: add more vars in returns()?
-	function getVotingStats(uint _i) public view returns(uint pro, uint versus, bool isFinished, bool currentResult) {
+	function getVotingStats(uint _i) public view returns(uint pro, uint versus, bool isFinished, bool isResultYes) {
 		pro           = votings[_i].pro;
 		versus        = votings[_i].versus;
 		isFinished    = _isFinished(_i);
-		currentResult = _isResultYes(_i);
+		isResultYes   = _isResultYes(_i);
 	}
 
 	function _isFinished(uint _i) internal view returns(bool isFin) {
-		if((votings[_i].pro * QUORUM_PERCENT) > votings[_i].snapshotToken.totalSupply()) {
+		if((votings[_i].pro * QUORUM_PERCENT) > votings[_i].snapshot.totalSupply()) {
 			isFin = true;
 		}
 	}
 
 	function _isResultYes(uint _i) internal view returns(bool isYes) {
-		if(votings[_i] <= (1-CONSENSUS_PERCENT)*votings[_i].pro) {
+		if(votings[_i].versus <= (1-CONSENSUS_PERCENT)*votings[_i].pro) {
 			isYes = true;
 		}
 	}
 
 	function vote(uint _i, bool _isYes) public {
 		require(!_isFinished(_i));
-		uint tokenHolderBalance = votings[_i].snapshotToken.balanceOf(msg.sender);
+		uint tokenHolderBalance = votings[_i].snapshot.balanceOf(msg.sender);
 
 		// 1 - recalculate stats
-		if(!isVotingFinished){
-			if(_isYes){
-				v.pro+=tokenHolderBalance;
-			}else{
-				v.versus+=tokenHolderBalance;
-			}
+		if(_isResultYes(_i)){
+			votings[_i].pro += tokenHolderBalance;
+		}else{
+			votings[_i].versus += tokenHolderBalance;
 		}
-
+		
 		// 2 - if voting is finished (last caller) AND the result is YES -> call the target method 
 		if(_isFinished(_i) && _isResultYes(_i)){
-			if(votings[_i].type=="setExitStake"){
-				bridgeContract.setExitStake(v.param);
-			}else if(votings[_i].type=="setEpochLength") {
-				bridgeContract.setEpochLength(v.param);
+			if(votings[_i].votingType==VotingType.SetExitStake){
+				bridgeContract.setExitStake(votings[_i].param);
+			}else if(votings[_i].votingType==VotingType.SetEpochLength) {
+				bridgeContract.setEpochLength(votings[_i].param);
 			}
 
-			token.stopSnapshot(votings[_i].snapshotToken);
+			token.stopSnapshot(votings[_i].snapshot);
 		}
 	}
 }

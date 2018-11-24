@@ -1,12 +1,14 @@
-pragma solidity ^0.4.25;
+pragma solidity ^0.4.24;
 import "./IBridgeContract.sol";
 
 contract BridgeTest is IBridgeContract {
 	address owner;
+	uint public exitStake;
+	uint public epochLength;
 
 	modifier onlyOwner() {
 		require(msg.sender==owner);
-		_
+		_;
 	}
 
 	constructor() {
