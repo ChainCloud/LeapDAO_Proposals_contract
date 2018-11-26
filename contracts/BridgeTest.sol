@@ -1,7 +1,7 @@
 pragma solidity ^0.4.24;
 import "./IBridgeContract.sol";
 
-contract BridgeTest is IBridgeContract {
+contract BridgeTestable is IBridgeContract {
 	address owner;
 	uint public exitStake;
 	uint public epochLength;

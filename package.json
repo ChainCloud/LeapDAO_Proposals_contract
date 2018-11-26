@@ -28,6 +28,7 @@
 	},
 	"homepage": "https://github.com/ChainCloud/LeapDAO_Proposals_contract",
 	"dependencies": {
+		"@thetta/core": "^1.4.1",
 		"babel-eslint": "^8.2.6",
 		"babel-polyfill": "^6.26.0",
 		"babel-register": "^6.26.0",

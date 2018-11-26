@@ -1,4 +1,4 @@
-var BridgeTest= artifacts.require("./BridgeTest");
+var BridgeTestable= artifacts.require("./BridgeTestable");
 var ProposalsContract = artifacts.require("./ProposalsContract");
 var PreserveBalancesOnTransferToken = artifacts.require("./PreserveBalancesOnTransferToken");
 
@@ -33,7 +33,7 @@ contract('ProposalsContract', (accounts) => {
 			await preserveBalancesOnTransferToken.mint(u4, 1e18);
 			await preserveBalancesOnTransferToken.mint(u5, 1e18);
 
-			bridgeTest = await BridgeTest.new();
+			bridgeTest = await BridgeTestable.new();
 			proposalsContract = await ProposalsContract.new(bridgeTest.address, preserveBalancesOnTransferToken.address);
 
 			await proposalsContract.setEpochLength(500, {from:creator});
