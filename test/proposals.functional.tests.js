@@ -2,10 +2,6 @@ var BridgeTestable= artifacts.require("./BridgeTestable");
 var ProposalsContract = artifacts.require("./ProposalsContract");
 var PreserveBalancesOnTransferToken = artifacts.require("./PreserveBalancesOnTransferToken");
 
-// let tx = await taskTable.addNewTask("Test", "Task for tests", true, false, neededWei, 1, 1);
-// let events = tx.logs.filter(l => l.event === 'TaskTableElementAdded');
-// let id = events[0].args._eId;
-
 require('chai')
 	.use(require('chai-as-promised'))
 	.use(require('chai-bignumber')(web3.BigNumber))
@@ -34,7 +30,7 @@ contract('ProposalsContract', (accounts) => {
 			await preserveBalancesOnTransferToken.mint(u5, 1e18);
 
 			bridgeTestable = await BridgeTestable.new();
-			proposalsContract = await ProposalsContract.new(bridgeTestable.address, preserveBalancesOnTransferToken.address);
+			proposalsContract = await ProposalsContract.new(bridgeTestable.address, preserveBalancesOnTransferToken.address, creator);
 
 			await preserveBalancesOnTransferToken.transferOwnership(proposalsContract.address);
 			await bridgeTestable.transferOwnership(proposalsContract.address);

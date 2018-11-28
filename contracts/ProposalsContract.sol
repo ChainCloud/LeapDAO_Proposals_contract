@@ -9,23 +9,22 @@ import "./BridgeTestable.sol";
 // See https://github.com/leapdao/leap-contracts/blob/master/contracts/LeapBridge.sol
 // _bridgeAddr should call transferOwnership() to THIS contract!!!
 contract ProposalsContract {
-	address bridgeAddr;
-	PreserveBalancesOnTransferToken token;
+	address public bridgeAddr;
+	address public multisigAddress;
+	PreserveBalancesOnTransferToken public token;
 
 	uint public QUORUM_PERCENT = 80;
 	uint public CONSENSUS_PERCENT = 80;
 
 	event VotingStarted(string _type, uint _param, uint _totalSupplyAtEvent, uint _eventId, address _byWhom);
+	event VOTINGDONE();
 
-	event VoteWas(address sender, uint pro, uint versus, uint totalSupply, bool _isFinished, bool _isResultYes);
-	event VoteAfter(address sender, uint pro, uint versus, uint totalSupply, bool _isFinished, bool _isResultYes);
 	enum VotingType {
 		SetExitStake,
 		SetEpochLength
 	}
 
 	struct Voting {
-		address startedBy;
 		VotingType votingType;
 		uint param;
 		uint eventId;
@@ -37,18 +36,17 @@ contract ProposalsContract {
 
 	Voting[] votings;
 
-	constructor(address _bridgeAddr, PreserveBalancesOnTransferToken _token) public {
+	constructor(address _bridgeAddr, PreserveBalancesOnTransferToken _token, address _multisigAddress) public {
+		multisigAddress = _multisigAddress;
 		bridgeAddr = _bridgeAddr;
 		token = _token;
 	}
 
 	function setExitStake(uint256 _exitStake) public {
-		// uint tokenHolderBalance = token.balanceOf(msg.sender);
-		// require(tokenHolderBalance>0);
+		require(msg.sender==multisigAddress);
 		uint eventId = token.startNewEvent();
 		uint totalSupplyAtEvent = token.totalSupply();
 		Voting v;
-		v.startedBy 		 = msg.sender;
 		v.votingType 		 = VotingType.SetExitStake;
 		v.param 			 = _exitStake;
 		v.eventId 		 = eventId;
@@ -61,12 +59,10 @@ contract ProposalsContract {
 	}
 
 	function setEpochLength(uint256 _epochLength) public {
-		// uint tokenHolderBalance = token.balanceOf(msg.sender);
-		// require(tokenHolderBalance>0);
+		require(msg.sender==multisigAddress);
 		uint eventId = token.startNewEvent();
 		uint totalSupplyAtEvent = token.totalSupply();
 		Voting v;
-		// v.startedBy 		 = msg.sender;
 		v.votingType 		 = VotingType.SetEpochLength;
 		v.param 			 = _epochLength;
 		v.eventId 		 = 0;
@@ -96,12 +92,10 @@ contract ProposalsContract {
 		isResultYes   = _isResultYes(_i);
 	}
 
-	event isFinished(address sender, uint totalSupplyAtEvent, uint QUORUM_PERCENTtotalSupplyAtEvent, uint pro, uint pro100);
 	function _isFinished(uint _i) internal returns(bool isFin) {
 		uint a = 80 * votings[_i].totalSupplyAtEvent;
 		uint b = (votings[_i].pro + votings[_i].versus) * 100;
 		isFin = (b >= a);
-		// return false;
 	}
 
 	function _isResultYes(uint _i) internal view returns(bool isYes) {
@@ -116,14 +110,10 @@ contract ProposalsContract {
 		}
 	}	
 
-	event VOTINGDONE();
-
 	function vote(uint _i, bool _isYes) public {
-		// BridgeTestable(bridgeAddr).setEpochLength(500);
-		
 		emit VoteWas(msg.sender, votings[_i].pro, votings[_i].versus, votings[_i].totalSupplyAtEvent, _isFinished(_i), _isResultYes(_i));
 		require(!_isFinished(_i));
-		uint tokenHolderBalance = 1e18;//token.getBalanceAtEventStart(0, msg.sender);
+		uint tokenHolderBalance = token.getBalanceAtEventStart(0, msg.sender);
 		require(!_isVoted(_i, msg.sender));
 		votings[_i].voted.push(msg.sender);
 		// 1 - recalculate stats
@@ -142,16 +132,14 @@ contract ProposalsContract {
 		if(_isFinished(_i) && _isResultYes(_i)){
 			emit VOTINGDONE();
 			if(votings[_i].votingType==VotingType.SetExitStake){
-				// BridgeTestable(bridgeAddr).setExitStake(votings[_i].param);
+				BridgeTestable(bridgeAddr).setExitStake(votings[_i].param);
 			}else if(votings[_i].votingType==VotingType.SetEpochLength) {
 				BridgeTestable(bridgeAddr).setEpochLength(votings[_i].param);
 				
 			}
-
-			// token.finishEvent(votings[_i].eventId);
+			token.finishEvent(votings[_i].eventId);
 		}
 
 		emit VoteAfter(msg.sender, votings[_i].pro, votings[_i].versus, votings[_i].totalSupplyAtEvent, _isFinished(_i), _isResultYes(_i));
-		
 	}
 }
