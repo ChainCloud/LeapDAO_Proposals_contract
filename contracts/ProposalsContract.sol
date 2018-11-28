@@ -33,8 +33,8 @@ contract ProposalsContract {
 		uint eventId;
 		uint pro;
 		uint versus;
-		uint totalSupplyAtEvent;
-		address[] voted;
+		uint totalSupplyAtEvemapping(address=>bool);
+		mapping(address=>bool) voted;
 	}
 
 	Voting[] votings;
@@ -148,15 +148,7 @@ contract ProposalsContract {
 	 * @return Has voted or not
 	 */
 	function _votingIndexsVoted(uint _votingIndex, address _a) internal view returns(bool isVoted) {
-		// TODO: use mapping here!!!
-		for(uint j=0; j<votings[_votingIndex].voted.length; j++) {
-			if(votings[_votingIndex].voted[j]==_a) {
-				isVoted = true;
-				return;
-			}
-		}
-
-		isVoted = false;
+		isVoted = votings[_votingIndex].voted[_a];
 	}	
 
 	/**
@@ -171,7 +163,7 @@ contract ProposalsContract {
 		require(tokenHolderBalance);
 		require(!_votingIndexsVoted(_votingIndex, msg.sender));
 
-		votings[_votingIndex].voted.push(msg.sender);
+		votings[_votingIndex].voted[msg.sender] = true;
 
 		// 1 - recalculate stats
 		if(_votingIndexsYes){
