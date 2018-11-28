@@ -15,7 +15,7 @@ contract BridgeTestable is Ownable, IBridgeContract {
 
 	/**
 	 * @notice This function can be called only by owner
-	 * @param uint _exitStake – value of exitStake param
+	 * @param _exitStake – value of exitStake param
 	 */
 	function setExitStake(uint _exitStake) public onlyOwner {
 		exitStake = _exitStake;
@@ -23,7 +23,7 @@ contract BridgeTestable is Ownable, IBridgeContract {
 
 	/**
 	 * @notice This function can be called only by owner
-	 * @param uint _exitStake – value of epochLength param
+	 * @param _epochLength – value of epochLength param
 	 */
 	function setEpochLength(uint _epochLength) public onlyOwner {
 		epochLength = _epochLength;

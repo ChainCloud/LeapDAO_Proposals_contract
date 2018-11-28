@@ -3,7 +3,7 @@ pragma solidity ^0.4.24;
 import "@thetta/core/contracts/tokens/PreserveBalancesOnTransferToken.sol";
 import "@thetta/core/contracts/tokens/SnapshotToken.sol";
 
-import "./BridgeTestable.sol";
+import "./IBridgeContract.sol";
 
 
 /**
@@ -12,7 +12,7 @@ import "./BridgeTestable.sol";
  * See https://github.com/leapdao/leap-contracts/blob/master/contracts/LeapBridge.sol
  */
 contract ProposalsContract {
-	address public bridgeAddr;
+	IBridgeContract public bridgeAddr;
 	address public multisigAddress;
 	PreserveBalancesOnTransferToken public token;
 
@@ -50,7 +50,7 @@ contract ProposalsContract {
 	 * @param _token – address of the main DAO token
 	 * @param _multisigAddress – address of the mulitisig contract (that controls us)
 	 */
-	constructor(address _bridgeAddr, PreserveBalancesOnTransferToken _token, address _multisigAddress) public {
+	constructor(IBridgeContract _bridgeAddr, PreserveBalancesOnTransferToken _token, address _multisigAddress) public {
 		multisigAddress = _multisigAddress;
 		bridgeAddr = _bridgeAddr;
 		token = _token;
@@ -59,7 +59,7 @@ contract ProposalsContract {
 	/**
 	 * @dev Propose the 'exitStake' parameter change
 	 * @notice This function creates voting
-	 * @param uint256 _exitStake – value of exitStake param
+	 * @param _exitStake – value of exitStake param
 	 */
 	function setExitStake(uint256 _exitStake) public onlyMultisigAddress {
 		Voting v;
@@ -77,7 +77,7 @@ contract ProposalsContract {
 	/**
 	 * @dev Propose the 'epochLength' parameter change
 	 * @notice This function creates voting
-	 * @param uint256 _epochLength – value of epochLength param
+	 * @param _epochLength – value of epochLength param
 	 */
 	function setEpochLength(uint256 _epochLength) public onlyMultisigAddress {
 		Voting v;
@@ -95,7 +95,7 @@ contract ProposalsContract {
 	/**
 	 * @dev Get ALL voting count 
 	 * @notice This function can be called by anyone
-	 * @return uint Voting count
+	 * @return Voting count
 	 */
 	function getVotingsCount()public view returns(uint){
 		return votings.length;
@@ -104,12 +104,12 @@ contract ProposalsContract {
 	/**
 	* @dev Get voting data
 	 * @notice This function can be called by anyone
-	 * @param uint _votingIndex – voting number
-	 * @return VotingType votingType – what is this voting for
-	 * @return uint paramValue – what is param amount
-	 * @return uint versus – sum of voters token amount, that voted no
-	 * @return bool isFinished – is Quorum reached
-	 * @return bool isResultYes – is voted yes >= 80%
+	 * @param _votingIndex – voting number
+	 * @return votingType – what is this voting for
+	 * @return paramValue – what is param amount
+	 * @return versus – sum of voters token amount, that voted no
+	 * @return isFinished – is Quorum reached
+	 * @return isResultYes – is voted yes >= 80%
 	 */
 	function getVotingStats(uint _votingIndex) public view returns(VotingType votingType, uint paramValue, uint pro, uint versus, bool isFinished, bool isResultYes) {
 		require(_votingIndex<votings.length);
@@ -122,8 +122,8 @@ contract ProposalsContract {
 	}
 
 	/**
-	* @dev Is selected voting finished?
-	 * @param uint _votingIndex – voting number
+	 * @dev Is selected voting finished?
+	 * @param _votingIndex – voting number
 	 * @return is quorum reched or not
 	 */
 	function _isVotingFinished(uint _votingIndex) internal returns(bool isFin) {
@@ -137,7 +137,7 @@ contract ProposalsContract {
 	/**
 	 * @dev Is selected voting result is YES? 
 	 * @notice Not checking whether it is finished!
-	 * @param uint _votingIndex – voting number
+	 * @param _votingIndex – voting number
 	 * @return is current result yes or not
 	 */
 	function _isVotingResultYes(uint _votingIndex) internal view returns(bool isYes) {
@@ -146,9 +146,9 @@ contract ProposalsContract {
 	}
 
 	/**
-	* @dev Has token holder already voted?
-	 * @param uint _votingIndex – voting number
-	 * @param address _a – potential voter address
+	 * @dev Has token holder already voted?
+	 * @param _votingIndex – voting number
+	 * @param _a – potential voter address
 	 * @return Has voted or not
 	 */
 	function _isVoted(uint _votingIndex, address _a) internal view returns(bool isVoted) {
@@ -158,8 +158,8 @@ contract ProposalsContract {
 
 	/**
 	 * @dev Vote YES or NO
-	 * @param uint _votingIndex – voting number
-	 * @param bool _votingIndexsYes – voters opinion
+	 * @param _votingIndex – voting number
+	 * @param _votingIndexsYes – voters opinion
 	 */
 	function vote(uint _votingIndex, bool _votingIndexsYes) public {
 		require(_votingIndex<votings.length);
@@ -183,9 +183,9 @@ contract ProposalsContract {
 			emit VotingFinished();
 
 			if(votings[_votingIndex].votingType==VotingType.SetExitStake){
-				BridgeTestable(bridgeAddr).setExitStake(votings[_votingIndex].param);
+				bridgeAddr.setExitStake(votings[_votingIndex].param);
 			}else if(votings[_votingIndex].votingType==VotingType.SetEpochLength) {
-				BridgeTestable(bridgeAddr).setEpochLength(votings[_votingIndex].param);		
+				bridgeAddr.setEpochLength(votings[_votingIndex].param);		
 			}
 
 			token.finishEvent(votings[_votingIndex].eventId);
