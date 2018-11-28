@@ -41,6 +41,11 @@ contract ProposalsContract {
 
 	Voting[] votings;
 
+	modifier onlyMultisigAddress() {
+		require(msg.sender==multisigAddress);
+		_;
+	}
+
 	constructor(address _bridgeAddr, PreserveBalancesOnTransferToken _token, address _multisigAddress) public {
 		multisigAddress = _multisigAddress;
 		bridgeAddr = _bridgeAddr;
@@ -52,8 +57,7 @@ contract ProposalsContract {
 	* @notice This function creates voting
 	* @param uint256 _exitStake – value of param exitStake
 	*/
-	function setExitStake(uint256 _exitStake) public {
-		require(msg.sender==multisigAddress);
+	function setExitStake(uint256 _exitStake) public onlyMultisigAddress {
 		uint eventId = token.startNewEvent();
 		uint totalSupplyAtEvent = token.totalSupply();
 		Voting v;
@@ -73,7 +77,7 @@ contract ProposalsContract {
 	* @notice This function creates voting
 	* @param uint256 _epochLength – value of param epochLength
 	*/
-	function setEpochLength(uint256 _epochLength) public {
+	function setEpochLength(uint256 _epochLength) public onlyMultisigAddress {
 		require(msg.sender==multisigAddress);
 		uint eventId = token.startNewEvent();
 		uint totalSupplyAtEvent = token.totalSupply();
@@ -85,6 +89,7 @@ contract ProposalsContract {
 		v.versus = 0;
 		v.totalSupplyAtEvent = totalSupplyAtEvent;
 		votings.push(v);
+		
 		emit VotingStarted("setEpochLength", _epochLength, totalSupplyAtEvent, eventId, msg.sender);
 	}
 
