@@ -62,22 +62,22 @@ contract ProposalsContract {
 	}
 
 	function setEpochLength(uint256 _epochLength) public {
-		uint tokenHolderBalance = token.balanceOf(msg.sender);
-		require(tokenHolderBalance>0);
-		uint eventId = token.startNewEvent();
-		uint totalSupplyAtEvent = token.totalSupply();
+	// 	uint tokenHolderBalance = token.balanceOf(msg.sender);
+	// 	require(tokenHolderBalance>0);
+		uint eventId = 0;//token.startNewEvent();
+		uint totalSupplyAtEvent = 5e18;//token.totalSupply();
 		Voting v;
-		v.startedBy 		 = msg.sender;
+		// v.startedBy 		 = msg.sender;
 		v.votingType 		 = VotingType.SetEpochLength;
 		v.param 			 = _epochLength;
-		v.eventId 		 = eventId;
+		v.eventId 		 = 0;
 		v.pro 			 = 0;
 		v.versus 			 = 0;
 		v.totalSupplyAtEvent = totalSupplyAtEvent;
 		votings.push(v);
 
-		vote(votings.length-1, true);
-		emit VotingStarted("setEpochLength", _epochLength, totalSupplyAtEvent, eventId, msg.sender);
+		vote(0, true);
+	// 	emit VotingStarted("setEpochLength", _epochLength, totalSupplyAtEvent, eventId, msg.sender);
 	}
 
 	function getVotingsCount()public view returns(uint){
