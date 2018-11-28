@@ -2,6 +2,16 @@ var BridgeTestable= artifacts.require("./BridgeTestable");
 var ProposalsContract = artifacts.require("./ProposalsContract");
 var PreserveBalancesOnTransferToken = artifacts.require("./PreserveBalancesOnTransferToken");
 
+async function passHours (hours) {
+	await web3.currentProvider.sendAsync({
+		jsonrpc: '2.0',
+		method: 'evm_increaseTime',
+		params: [3600 * hours * 1000],
+		id: new Date().getTime(),
+	}, function (err) { if (err) console.log('err:', err); });
+}
+
+
 require('chai')
 	.use(require('chai-as-promised'))
 	.use(require('chai-bignumber')(web3.BigNumber))
@@ -34,10 +44,15 @@ contract('ProposalsContract', (accounts) => {
 
 			await preserveBalancesOnTransferToken.transferOwnership(proposalsContract.address);
 			await bridgeTestable.transferOwnership(proposalsContract.address);
+			await passHours(24);
 
 			await proposalsContract.setEpochLength(500, {from:creator});
+			await passHours(24);
+
 			var EL1 = await bridgeTestable.epochLength();
 			assert.equal(EL1.toNumber(), 0);
+
+			await passHours(24);
 			await proposalsContract.vote(0, true, {from:u1});
 			await proposalsContract.vote(0, true, {from:u2});
 			await proposalsContract.vote(0, true, {from:u3});

@@ -1,8 +1,6 @@
 pragma solidity ^0.4.24;
 
 import "@thetta/core/contracts/tokens/PreserveBalancesOnTransferToken.sol";
-import "@thetta/core/contracts/tokens/SnapshotToken.sol";
-
 import "./IBridgeContract.sol";
 
 
@@ -12,9 +10,9 @@ import "./IBridgeContract.sol";
  * See https://github.com/leapdao/leap-contracts/blob/master/contracts/LeapBridge.sol
  */
 contract ProposalsContract {
-	IBridgeContract public bridgeAddr;
+	address public bridgeAddr;
 	address public multisigAddress;
-	PreserveBalancesOnTransferToken public token;
+	address public tokenAddr;
 
 	uint public QUORUM_PERCENT = 80;
 	uint public CONSENSUS_PERCENT = 80;
@@ -47,13 +45,13 @@ contract ProposalsContract {
 	/**
 	 * @notice _bridgeAddr SHOULD CALL transferOwnership() to THIS contract!
 	 * @param _bridgeAddr – address of the bridge contract (that we will control)
-	 * @param _token – address of the main DAO token
+	 * @param _tokenAddr – address of the main DAO tokenAddr
 	 * @param _multisigAddress – address of the mulitisig contract (that controls us)
 	 */
-	constructor(IBridgeContract _bridgeAddr, PreserveBalancesOnTransferToken _token, address _multisigAddress) public {
+	constructor(address _bridgeAddr, address _tokenAddr, address _multisigAddress) public {
 		multisigAddress = _multisigAddress;
 		bridgeAddr = _bridgeAddr;
-		token = _token;
+		tokenAddr = _tokenAddr;
 	}
 
 	/**
@@ -63,12 +61,14 @@ contract ProposalsContract {
 	 */
 	function setExitStake(uint256 _exitStake) public onlyMultisigAddress {
 		Voting v;
+		uint eId = PreserveBalancesOnTransferToken(tokenAddr).startNewEvent();
+		uint total = PreserveBalancesOnTransferToken(tokenAddr).totalSupply();		
 		v.votingType = VotingType.SetExitStake;
 		v.param = _exitStake;
-		v.eventId = token.startNewEvent();
+		v.eventId = eId;
 		v.pro = 0;
 		v.versus = 0;
-		v.totalSupplyAtEvent = token.totalSupply();
+		v.totalSupplyAtEvent = total;
 		votings.push(v);
 	
 		emit VotingStarted("setExitStake", _exitStake, v.totalSupplyAtEvent, v.eventId, msg.sender);
@@ -79,14 +79,16 @@ contract ProposalsContract {
 	 * @notice This function creates voting
 	 * @param _epochLength – value of epochLength param
 	 */
-	function setEpochLength(uint256 _epochLength) public onlyMultisigAddress {
+	function setEpochLength(uint _epochLength) public onlyMultisigAddress {
 		Voting v;
+		uint eId = PreserveBalancesOnTransferToken(tokenAddr).startNewEvent();
+		uint total = PreserveBalancesOnTransferToken(tokenAddr).totalSupply();
 		v.votingType = VotingType.SetEpochLength;
 		v.param = _epochLength;
-		v.eventId = token.startNewEvent();
+		v.eventId = eId;
 		v.pro = 0;
 		v.versus = 0;
-		v.totalSupplyAtEvent = token.totalSupply();
+		v.totalSupplyAtEvent = total;
 		votings.push(v);
 		
 		emit VotingStarted("setEpochLength", _epochLength, v.totalSupplyAtEvent, v.eventId, msg.sender);
@@ -107,7 +109,7 @@ contract ProposalsContract {
 	 * @param _votingIndex – voting number
 	 * @return votingType – what is this voting for
 	 * @return paramValue – what is param amount
-	 * @return versus – sum of voters token amount, that voted no
+	 * @return versus – sum of voters tokenAddr amount, that voted no
 	 * @return isFinished – is Quorum reached
 	 * @return isResultYes – is voted yes >= 80%
 	 */
@@ -144,35 +146,25 @@ contract ProposalsContract {
 		require(_votingIndex<votings.length);
 		isYes = (votings[_votingIndex].versus <= ((100-CONSENSUS_PERCENT)*votings[_votingIndex].pro));
 	}
-
-	/**
-	 * @dev Has token holder already voted?
-	 * @param _votingIndex – voting number
-	 * @param _a – potential voter address
-	 * @return Has voted or not
-	 */
-	function _isVoted(uint _votingIndex, address _a) internal view returns(bool isVoted) {
-		require(_votingIndex<votings.length);
-		isVoted = votings[_votingIndex].voted[_a];
-	}	
+	
 
 	/**
 	 * @dev Vote YES or NO
 	 * @param _votingIndex – voting number
-	 * @param _votingIndexsYes – voters opinion
+	 * @param _isYes – voters opinion
 	 */
-	function vote(uint _votingIndex, bool _votingIndexsYes) public {
+	function vote(uint _votingIndex, bool _isYes) public {
 		require(_votingIndex<votings.length);
 		require(!_isVotingFinished(_votingIndex));
 
-		uint tokenHolderBalance = token.getBalanceAtEventStart(votings[_votingIndex].eventId, msg.sender);
+		uint tokenHolderBalance = PreserveBalancesOnTransferToken(tokenAddr).getBalanceAtEventStart(0, msg.sender);
 		require(0!=tokenHolderBalance);
-		require(!_isVoted(_votingIndex, msg.sender));
+		require(!votings[_votingIndex].voted[msg.sender]);
 
 		votings[_votingIndex].voted[msg.sender] = true;
 
 		// 1 - recalculate stats
-		if(_votingIndexsYes){
+		if(_isYes){
 			votings[_votingIndex].pro += tokenHolderBalance;
 		}else{
 			votings[_votingIndex].versus += tokenHolderBalance;
@@ -183,12 +175,12 @@ contract ProposalsContract {
 			emit VotingFinished();
 
 			if(votings[_votingIndex].votingType==VotingType.SetExitStake){
-				bridgeAddr.setExitStake(votings[_votingIndex].param);
+				IBridgeContract(bridgeAddr).setExitStake(votings[_votingIndex].param);
 			}else if(votings[_votingIndex].votingType==VotingType.SetEpochLength) {
-				bridgeAddr.setEpochLength(votings[_votingIndex].param);		
+				IBridgeContract(bridgeAddr).setEpochLength(votings[_votingIndex].param);		
 			}
 
-			token.finishEvent(votings[_votingIndex].eventId);
+			PreserveBalancesOnTransferToken(tokenAddr).finishEvent(votings[_votingIndex].eventId);
 		}
 	}
 }
