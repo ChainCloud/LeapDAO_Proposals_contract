@@ -112,6 +112,7 @@ contract ProposalsContract {
 	 * @return bool isResultYes – is voted yes >= 80%
 	 */
 	function getVotingStats(uint _votingIndex) public view returns(VotingType votingType, uint paramValue, uint pro, uint versus, bool isFinished, bool isResultYes) {
+		require(_votingIndex<votings.length);
 		votingType = votings[_votingIndex].votingType;
 		paramValue = votings[_votingIndex].param;		
 		pro = votings[_votingIndex].pro;
@@ -126,6 +127,7 @@ contract ProposalsContract {
 	 * @return is quorum reched or not
 	 */
 	function _votingIndexsFinished(uint _votingIndex) internal returns(bool isFin) {
+		require(_votingIndex<votings.length);
 		uint a = QUORUM_PERCENT * votings[_votingIndex].totalSupplyAtEvent;
 		uint b = (votings[_votingIndex].pro + votings[_votingIndex].versus) * 100;
 		isFin = (b >= a);
@@ -138,6 +140,7 @@ contract ProposalsContract {
 	 * @return is current result yes or not
 	 */
 	function _votingIndexsResultYes(uint _votingIndex) internal view returns(bool isYes) {
+		require(_votingIndex<votings.length);
 		isYes = (votings[_votingIndex].versus <= ((100-CONSENSUS_PERCENT)*votings[_votingIndex].pro));
 	}
 
@@ -148,6 +151,7 @@ contract ProposalsContract {
 	 * @return Has voted or not
 	 */
 	function _votingIndexsVoted(uint _votingIndex, address _a) internal view returns(bool isVoted) {
+		require(_votingIndex<votings.length);
 		isVoted = votings[_votingIndex].voted[_a];
 	}	
 
@@ -157,6 +161,7 @@ contract ProposalsContract {
 	 * @param bool _votingIndexsYes – voters opinion
 	 */
 	function vote(uint _votingIndex, bool _votingIndexsYes) public {
+		require(_votingIndex<votings.length);
 		require(!_votingIndexsFinished(_votingIndex));
 
 		uint tokenHolderBalance = token.getBalanceAtEventStart(votings[_votingIndex].eventId, msg.sender);
