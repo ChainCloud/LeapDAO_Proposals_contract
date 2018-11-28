@@ -17,7 +17,7 @@ contract ProposalsContract {
 	uint public CONSENSUS_PERCENT = 80;
 
 	event VotingStarted(string _type, uint _param, uint _totalSupplyAtEvent, uint _eventId, address _byWhom);
-	event VOTINGDONE();
+	event VotingFinished();
 
 	enum VotingType {
 		SetExitStake,
@@ -47,11 +47,11 @@ contract ProposalsContract {
 		uint eventId = token.startNewEvent();
 		uint totalSupplyAtEvent = token.totalSupply();
 		Voting v;
-		v.votingType 		 = VotingType.SetExitStake;
-		v.param 			 = _exitStake;
-		v.eventId 		 = eventId;
-		v.pro 			 = 0;
-		v.versus 			 = 0;
+		v.votingType = VotingType.SetExitStake;
+		v.param = _exitStake;
+		v.eventId = eventId;
+		v.pro = 0;
+		v.versus = 0;
 		v.totalSupplyAtEvent = totalSupplyAtEvent;
 		votings.push(v);
 	
@@ -63,11 +63,11 @@ contract ProposalsContract {
 		uint eventId = token.startNewEvent();
 		uint totalSupplyAtEvent = token.totalSupply();
 		Voting v;
-		v.votingType 		 = VotingType.SetEpochLength;
-		v.param 			 = _epochLength;
-		v.eventId 		 = 0;
-		v.pro 			 = 0;
-		v.versus 			 = 0;
+		v.votingType = VotingType.SetEpochLength;
+		v.param = _epochLength;
+		v.eventId = 0;
+		v.pro = 0;
+		v.versus = 0;
 		v.totalSupplyAtEvent = totalSupplyAtEvent;
 		votings.push(v);
 
@@ -80,20 +80,20 @@ contract ProposalsContract {
 	}
 
 	function getVoting(uint _i) public view returns(VotingType votingType, uint paramValue, address startedBy) {
-		votingType  = votings[_i].votingType;
-		paramValue  = votings[_i].param;
-		startedBy   = votings[_i].startedBy;
+		votingType = votings[_i].votingType;
+		paramValue = votings[_i].param;
+		startedBy = votings[_i].startedBy;
 	}
 
 	function getVotingStats(uint _i) public view returns(uint pro, uint versus, bool isFinished, bool isResultYes) {
-		pro           = votings[_i].pro;
-		versus        = votings[_i].versus;
-		isFinished    = _isFinished(_i);
-		isResultYes   = _isResultYes(_i);
+		pro = votings[_i].pro;
+		versus = votings[_i].versus;
+		isFinished = _isFinished(_i);
+		isResultYes = _isResultYes(_i);
 	}
 
 	function _isFinished(uint _i) internal returns(bool isFin) {
-		uint a = 80 * votings[_i].totalSupplyAtEvent;
+		uint a = QUORUM_PERCENT * votings[_i].totalSupplyAtEvent;
 		uint b = (votings[_i].pro + votings[_i].versus) * 100;
 		isFin = (b >= a);
 	}
@@ -111,7 +111,6 @@ contract ProposalsContract {
 	}	
 
 	function vote(uint _i, bool _isYes) public {
-		emit VoteWas(msg.sender, votings[_i].pro, votings[_i].versus, votings[_i].totalSupplyAtEvent, _isFinished(_i), _isResultYes(_i));
 		require(!_isFinished(_i));
 		uint tokenHolderBalance = token.getBalanceAtEventStart(0, msg.sender);
 		require(!_isVoted(_i, msg.sender));
@@ -123,14 +122,9 @@ contract ProposalsContract {
 			votings[_i].versus += tokenHolderBalance;
 		}
 		
-		uint a = 80 * votings[_i].totalSupplyAtEvent;
-		uint b = (votings[_i].pro + votings[_i].versus) * 100;
-
-		emit isFinished(msg.sender, votings[_i].totalSupplyAtEvent, a, votings[_i].pro, b);
-
 		// 2 - if voting is finished (last caller) AND the result is YES -> call the target method 
 		if(_isFinished(_i) && _isResultYes(_i)){
-			emit VOTINGDONE();
+			emit VotingFinished();
 			if(votings[_i].votingType==VotingType.SetExitStake){
 				BridgeTestable(bridgeAddr).setExitStake(votings[_i].param);
 			}else if(votings[_i].votingType==VotingType.SetEpochLength) {
@@ -140,6 +134,5 @@ contract ProposalsContract {
 			token.finishEvent(votings[_i].eventId);
 		}
 
-		emit VoteAfter(msg.sender, votings[_i].pro, votings[_i].versus, votings[_i].totalSupplyAtEvent, _isFinished(_i), _isResultYes(_i));
 	}
 }
