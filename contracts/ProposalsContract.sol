@@ -33,7 +33,7 @@ contract ProposalsContract {
 		uint eventId;
 		uint pro;
 		uint versus;
-		uint totalSupplyAtEvemapping(address=>bool);
+		uint totalSupplyAtEvent;
 		mapping(address=>bool) voted;
 	}
 
@@ -116,8 +116,8 @@ contract ProposalsContract {
 		paramValue = votings[_votingIndex].param;		
 		pro = votings[_votingIndex].pro;
 		versus = votings[_votingIndex].versus;
-		isFinished = _votingIndexsFinished(_votingIndex);
-		isResultYes = _votingIndexsResultYes(_votingIndex);
+		isFinished = _isVotingFinished(_votingIndex);
+		isResultYes = _isVotingResultYes(_votingIndex);
 	}
 
 	/**
@@ -125,7 +125,7 @@ contract ProposalsContract {
 	 * @param uint _votingIndex – voting number
 	 * @return is quorum reched or not
 	 */
-	function _votingIndexsFinished(uint _votingIndex) internal returns(bool isFin) {
+	function _isVotingFinished(uint _votingIndex) internal returns(bool isFin) {
 		uint a = QUORUM_PERCENT * votings[_votingIndex].totalSupplyAtEvent;
 		uint b = (votings[_votingIndex].pro + votings[_votingIndex].versus) * 100;
 		isFin = (b >= a);
@@ -137,7 +137,7 @@ contract ProposalsContract {
 	 * @param uint _votingIndex – voting number
 	 * @return is current result yes or not
 	 */
-	function _votingIndexsResultYes(uint _votingIndex) internal view returns(bool isYes) {
+	function _isVotingResultYes(uint _votingIndex) internal view returns(bool isYes) {
 		isYes = (votings[_votingIndex].versus <= ((100-CONSENSUS_PERCENT)*votings[_votingIndex].pro));
 	}
 
@@ -147,7 +147,7 @@ contract ProposalsContract {
 	 * @param address _a – potential voter address
 	 * @return Has voted or not
 	 */
-	function _votingIndexsVoted(uint _votingIndex, address _a) internal view returns(bool isVoted) {
+	function _isVoted(uint _votingIndex, address _a) internal view returns(bool isVoted) {
 		isVoted = votings[_votingIndex].voted[_a];
 	}	
 
@@ -157,11 +157,11 @@ contract ProposalsContract {
 	 * @param bool _votingIndexsYes – voters opinion
 	 */
 	function vote(uint _votingIndex, bool _votingIndexsYes) public {
-		require(!_votingIndexsFinished(_votingIndex));
+		require(!_isVotingFinished(_votingIndex));
 
 		uint tokenHolderBalance = token.getBalanceAtEventStart(votings[_votingIndex].eventId, msg.sender);
-		require(tokenHolderBalance);
-		require(!_votingIndexsVoted(_votingIndex, msg.sender));
+		require(0!=tokenHolderBalance);
+		require(!_isVoted(_votingIndex, msg.sender));
 
 		votings[_votingIndex].voted[msg.sender] = true;
 
@@ -173,7 +173,7 @@ contract ProposalsContract {
 		}
 		
 		// 2 - if voting is finished (last caller) AND the result is YES -> call the target method 
-		if(_votingIndexsFinished(_votingIndex) && _votingIndexsResultYes(_votingIndex)){
+		if(_isVotingFinished(_votingIndex) && _isVotingResultYes(_votingIndex)){
 			emit VotingFinished();
 
 			if(votings[_votingIndex].votingType==VotingType.SetExitStake){
