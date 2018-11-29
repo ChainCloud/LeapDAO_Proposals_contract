@@ -10,9 +10,9 @@ import "./IBridgeContract.sol";
  * See https://github.com/leapdao/leap-contracts/blob/master/contracts/LeapBridge.sol
  */
 contract ProposalsContract {
-	address public bridgeAddr;
+	IBridgeContract public bridgeTestable;
 	address public multisigAddress;
-	address public tokenAddr;
+	PreserveBalancesOnTransferToken public token;
 
 	uint public QUORUM_PERCENT = 80;
 	uint public CONSENSUS_PERCENT = 80;
@@ -43,15 +43,15 @@ contract ProposalsContract {
 	}
 
 	/**
-	 * @notice _bridgeAddr SHOULD CALL transferOwnership() to THIS contract!
-	 * @param _bridgeAddr – address of the bridge contract (that we will control)
-	 * @param _tokenAddr – address of the main DAO tokenAddr
+	 * @notice _bridgeTestable SHOULD CALL transferOwnership() to THIS contract!
+	 * @param _bridgeTestable – address of the bridge contract (that we will control)
+	 * @param _token – address of the main DAO token
 	 * @param _multisigAddress – address of the mulitisig contract (that controls us)
 	 */
-	constructor(address _bridgeAddr, address _tokenAddr, address _multisigAddress) public {
+	constructor(IBridgeContract _bridgeTestable, PreserveBalancesOnTransferToken _token, address _multisigAddress) public {
 		multisigAddress = _multisigAddress;
-		bridgeAddr = _bridgeAddr;
-		tokenAddr = _tokenAddr;
+		bridgeTestable = _bridgeTestable;
+		token = _token;
 	}
 
 	/**
@@ -61,14 +61,12 @@ contract ProposalsContract {
 	 */
 	function setExitStake(uint256 _exitStake) public onlyMultisigAddress {
 		Voting memory v;
-		uint eId = PreserveBalancesOnTransferToken(tokenAddr).startNewEvent();
-		uint total = PreserveBalancesOnTransferToken(tokenAddr).totalSupply();		
 		v.votingType = VotingType.SetExitStake;
 		v.param = _exitStake;
-		v.eventId = eId;
+		v.eventId = token.startNewEvent();
 		v.pro = 0;
 		v.versus = 0;
-		v.totalSupplyAtEvent = total;
+		v.totalSupplyAtEvent = token.totalSupply();
 		votings.push(v);
 	
 		emit VotingStarted("setExitStake", _exitStake, v.totalSupplyAtEvent, v.eventId, msg.sender);
@@ -81,14 +79,12 @@ contract ProposalsContract {
 	 */
 	function setEpochLength(uint _epochLength) public onlyMultisigAddress {
 		Voting memory v;
-		uint eId = PreserveBalancesOnTransferToken(tokenAddr).startNewEvent();
-		uint total = PreserveBalancesOnTransferToken(tokenAddr).totalSupply();
 		v.votingType = VotingType.SetEpochLength;
 		v.param = _epochLength;
-		v.eventId = eId;
+		v.eventId = token.startNewEvent();
 		v.pro = 0;
 		v.versus = 0;
-		v.totalSupplyAtEvent = total;
+		v.totalSupplyAtEvent = token.totalSupply();
 		votings.push(v);
 		
 		emit VotingStarted("setEpochLength", _epochLength, v.totalSupplyAtEvent, v.eventId, msg.sender);
@@ -109,7 +105,7 @@ contract ProposalsContract {
 	 * @param _votingIndex – voting number
 	 * @return votingType – what is this voting for
 	 * @return paramValue – what is param amount
-	 * @return versus – sum of voters tokenAddr amount, that voted no
+	 * @return versus – sum of voters token amount, that voted no
 	 * @return isFinished – is Quorum reached
 	 * @return isResultYes – is voted yes >= 80%
 	 */
@@ -159,18 +155,16 @@ contract ProposalsContract {
 	function vote(uint _votingIndex, bool _isYes) public {
 		require(_votingIndex<votings.length);
 		require(!_isVotingFinished(_votingIndex));
-
-		uint tokenHolderBalance = PreserveBalancesOnTransferToken(tokenAddr).getBalanceAtEventStart(0, msg.sender);
-		require(0!=tokenHolderBalance);
+		require(0!=token.getBalanceAtEventStart(votings[_votingIndex].eventId, msg.sender));
 		require(!votings[_votingIndex].voted[msg.sender]);
 
 		votings[_votingIndex].voted[msg.sender] = true;
 
 		// 1 - recalculate stats
 		if(_isYes){
-			votings[_votingIndex].pro += tokenHolderBalance;
+			votings[_votingIndex].pro += token.getBalanceAtEventStart(votings[_votingIndex].eventId, msg.sender);
 		}else{
-			votings[_votingIndex].versus += tokenHolderBalance;
+			votings[_votingIndex].versus += token.getBalanceAtEventStart(votings[_votingIndex].eventId, msg.sender);
 		}
 		
 		// 2 - if voting is finished (last caller) AND the result is YES -> call the target method 
@@ -178,12 +172,12 @@ contract ProposalsContract {
 			emit VotingFinished();
  
 			if(votings[_votingIndex].votingType==VotingType.SetExitStake){
-				IBridgeContract(bridgeAddr).setExitStake(votings[_votingIndex].param);
+				bridgeTestable.setExitStake(votings[_votingIndex].param);
 			}else if(votings[_votingIndex].votingType==VotingType.SetEpochLength) {
-				IBridgeContract(bridgeAddr).setEpochLength(votings[_votingIndex].param);		
+				bridgeTestable.setEpochLength(votings[_votingIndex].param);		
 			}
 
-			PreserveBalancesOnTransferToken(tokenAddr).finishEvent(votings[_votingIndex].eventId);
+			token.finishEvent(votings[_votingIndex].eventId);
 		}
 	}
 }
