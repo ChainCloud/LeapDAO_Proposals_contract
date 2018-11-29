@@ -32,6 +32,14 @@ contract('ProposalsContract unit tests', (accounts) => {
 	var EXIT_STAKE = 0;
 	var EPOCH_LENGTH = 1;	
 
+	var stats;
+	var votingType;
+	var paramValue;
+	var pro;
+	var versus;
+	var isFinished;
+	var isResultYes;	
+
 	describe('Contract creations', function(){
 		it('Should create PreserveBalancesOnTransferToken',async() => {
 			preserveBalancesOnTransferToken = await PreserveBalancesOnTransferToken.new();
@@ -61,7 +69,6 @@ contract('ProposalsContract unit tests', (accounts) => {
 			await preserveBalancesOnTransferToken.mint(u2, 1e18);
 			await preserveBalancesOnTransferToken.mint(u3, 1e18);
 			await preserveBalancesOnTransferToken.mint(u4, 1e18);
-			await preserveBalancesOnTransferToken.mint(u5, 1e18);
 			
 			bridgeTestable = await BridgeTestable.new();
 			proposalsContract = await ProposalsContract.new(bridgeTestable.address, preserveBalancesOnTransferToken.address, creator);
@@ -163,7 +170,6 @@ contract('ProposalsContract unit tests', (accounts) => {
 			await preserveBalancesOnTransferToken.mint(u2, 1e18);
 			await preserveBalancesOnTransferToken.mint(u3, 1e18);
 			await preserveBalancesOnTransferToken.mint(u4, 1e18);
-			await preserveBalancesOnTransferToken.mint(u5, 1e18);
 			
 			bridgeTestable = await BridgeTestable.new();
 			proposalsContract = await ProposalsContract.new(bridgeTestable.address, preserveBalancesOnTransferToken.address, creator);
@@ -281,7 +287,6 @@ contract('ProposalsContract unit tests', (accounts) => {
 
 		it('Should return 1 if one voting',async() => {
 			await proposalsContract.setExitStake(1e15);
-			await proposalsContract.setExitStake(1e15);
 			var count = await proposalsContract.getVotingsCount();
 			assert.equal(count.toNumber(), 1);
 		});
@@ -302,7 +307,6 @@ contract('ProposalsContract unit tests', (accounts) => {
 			await preserveBalancesOnTransferToken.mint(u2, 1e18);
 			await preserveBalancesOnTransferToken.mint(u3, 1e18);
 			await preserveBalancesOnTransferToken.mint(u4, 1e18);
-			await preserveBalancesOnTransferToken.mint(u5, 1e18);
 			
 			bridgeTestable = await BridgeTestable.new();
 			proposalsContract = await ProposalsContract.new(bridgeTestable.address, preserveBalancesOnTransferToken.address, creator);
@@ -311,23 +315,23 @@ contract('ProposalsContract unit tests', (accounts) => {
 		});
 
 		it('Should revert if no votings',async() => {
-			var stats = await proposalsContract.votingStats(0).should.be.rejectedWith('revert');
+			var stats = await proposalsContract.getVotingStats(0).should.be.rejectedWith('revert');
 		});
 
 		it('Should get votingStats',async() => {
 			await proposalsContract.setExitStake(1e15);
-			var stats = await proposalsContract.votingStats(0).should.be.fulfilled;
+			var stats = await proposalsContract.getVotingStats(0).should.be.fulfilled;
 		});
 
 		it('Should revert if no voting with this id',async() => {
 			await proposalsContract.setExitStake(1e15);
-			var stats = await proposalsContract.votingStats(1).should.be.rejectedWith('revert');
+			var stats = await proposalsContract.getVotingStats(1).should.be.rejectedWith('revert');
 		});		
 
 		it('Should get votingStats',async() => {
 			await proposalsContract.setExitStake(1e15);
 			await proposalsContract.setExitStake(2e15);
-			var stats = await proposalsContract.votingStats(1).should.be.fulfilled;
+			var stats = await proposalsContract.getVotingStats(1).should.be.fulfilled;
 		});				
 	});
 
@@ -339,24 +343,23 @@ contract('ProposalsContract unit tests', (accounts) => {
 			await preserveBalancesOnTransferToken.mint(u2, 1e18);
 			await preserveBalancesOnTransferToken.mint(u3, 1e18);
 			await preserveBalancesOnTransferToken.mint(u4, 1e18);
-			await preserveBalancesOnTransferToken.mint(u5, 1e18);
 			
 			bridgeTestable = await BridgeTestable.new();
 			proposalsContract = await ProposalsContract.new(bridgeTestable.address, preserveBalancesOnTransferToken.address, creator);
 			await preserveBalancesOnTransferToken.transferOwnership(proposalsContract.address);
 			await bridgeTestable.transferOwnership(proposalsContract.address);
-		
-			await proposalsContract.setExitStake(1e15);
-			var stats = await proposalsContract.votingStats(0);
-			var votingType = stats[0];
-			var paramValue = stats[1].toNumber();
-			var pro = stats[2].toNumber();
-			var versus = stats[3].toNumber();
-			var isFinished = stats[4];
-			var isResultYes = stats[5];
 		});
 
 		it('Should get votingStats params',async() => {
+			await proposalsContract.setExitStake(1e15);
+			stats = await proposalsContract.getVotingStats(0);
+			votingType = stats[0].toNumber();
+			paramValue = stats[1].toNumber();
+			pro = stats[2].toNumber();
+			versus = stats[3].toNumber();
+			isFinished = stats[4];
+			isResultYes = stats[5];
+
 			assert.equal(votingType, EXIT_STAKE);
 			assert.equal(paramValue, 1e15);
 			assert.equal(pro, 0);
@@ -366,8 +369,17 @@ contract('ProposalsContract unit tests', (accounts) => {
 		});
 
 		it('Should get votingStats params',async() => {
-			assert.equal(votingType, EPOCH_LENGTH);
-			assert.equal(paramValue, 500);
+			await proposalsContract.setExitStake(1e15);
+			stats = await proposalsContract.getVotingStats(0);
+			votingType = stats[0].toNumber();
+			paramValue = stats[1].toNumber();
+			pro = stats[2].toNumber();
+			versus = stats[3].toNumber();
+			isFinished = stats[4];
+			isResultYes = stats[5];
+
+			assert.equal(votingType, EXIT_STAKE);
+			assert.equal(paramValue, 1e15);
 			assert.equal(pro, 0);
 			assert.equal(versus, 0);
 			assert.equal(isFinished, false);
@@ -375,10 +387,19 @@ contract('ProposalsContract unit tests', (accounts) => {
 		});
 
 		it('Should get correct pro and isResultYes amount',async() => {
+			await proposalsContract.setExitStake(1e15);		
 			await proposalsContract.vote(0, true, {from:u1});
 
-			assert.equal(votingType, EPOCH_LENGTH);
-			assert.equal(paramValue, 500);
+			stats = await proposalsContract.getVotingStats(0);
+			votingType = stats[0].toNumber();
+			paramValue = stats[1].toNumber();
+			pro = stats[2].toNumber();
+			versus = stats[3].toNumber();
+			isFinished = stats[4];
+			isResultYes = stats[5];
+
+			assert.equal(votingType, EXIT_STAKE);
+			assert.equal(paramValue, 1e15);
 			assert.equal(pro, 1e18);
 			assert.equal(versus, 0);
 			assert.equal(isFinished, false);
@@ -386,10 +407,19 @@ contract('ProposalsContract unit tests', (accounts) => {
 		});
 
 		it('Should get correct versus amount',async() => {
+			await proposalsContract.setExitStake(1e15);
 			await proposalsContract.vote(0, false, {from:u1});
+		
+			stats = await proposalsContract.getVotingStats(0);
+			votingType = stats[0].toNumber();
+			paramValue = stats[1].toNumber();
+			pro = stats[2].toNumber();
+			versus = stats[3].toNumber();
+			isFinished = stats[4];
+			isResultYes = stats[5];
 
-			assert.equal(votingType, EPOCH_LENGTH);
-			assert.equal(paramValue, 500);
+			assert.equal(votingType, EXIT_STAKE);
+			assert.equal(paramValue, 1e15);
 			assert.equal(pro, 0);
 			assert.equal(versus, 1e18);
 			assert.equal(isFinished, false);
@@ -397,13 +427,23 @@ contract('ProposalsContract unit tests', (accounts) => {
 		});
 
 		it('Should get correct isFinished amount when all true',async() => {
+			await proposalsContract.setExitStake(1e15);
+			
 			await proposalsContract.vote(0, true, {from:u1});
 			await proposalsContract.vote(0, true, {from:u2});
 			await proposalsContract.vote(0, true, {from:u3});
 			await proposalsContract.vote(0, true, {from:u4});
 
-			assert.equal(votingType, EPOCH_LENGTH);
-			assert.equal(paramValue, 500);
+			stats = await proposalsContract.getVotingStats(0);
+			votingType = stats[0].toNumber();
+			paramValue = stats[1].toNumber();
+			pro = stats[2].toNumber();
+			versus = stats[3].toNumber();
+			isFinished = stats[4];
+			isResultYes = stats[5];
+
+			assert.equal(votingType, EXIT_STAKE);
+			assert.equal(paramValue, 1e15);
 			assert.equal(pro, 4e18);
 			assert.equal(versus, 0);
 			assert.equal(isFinished, true);
@@ -411,17 +451,30 @@ contract('ProposalsContract unit tests', (accounts) => {
 		});
 
 		it('Should get correct isFinished amount when not all true',async() => {
+			await proposalsContract.setExitStake(1e15);
+
 			await proposalsContract.vote(0, true, {from:u1});
 			await proposalsContract.vote(0, true, {from:u2});
 			await proposalsContract.vote(0, true, {from:u3});
 			await proposalsContract.vote(0, false, {from:u4});
 
-			assert.equal(votingType, EPOCH_LENGTH);
-			assert.equal(paramValue, 500);
+			stats = await proposalsContract.getVotingStats(0);
+			votingType = stats[0].toNumber();
+			paramValue = stats[1].toNumber();
+			pro = stats[2].toNumber();
+			versus = stats[3].toNumber();
+			isFinished = stats[4];
+			isResultYes = stats[5];
+
+			assert.equal(votingType, EXIT_STAKE);
+			assert.equal(paramValue, 1e15);
 			assert.equal(pro, 3e18);
 			assert.equal(versus, 1e18);
 			assert.equal(isFinished, true);
 			assert.equal(isResultYes, false);
 		});
 	});
+
+	// TODO: check differtent tokenHolders count
+	// TODO: chck revert if already finished
 });

@@ -60,7 +60,7 @@ contract ProposalsContract {
 	 * @param _exitStake – value of exitStake param
 	 */
 	function setExitStake(uint256 _exitStake) public onlyMultisigAddress {
-		Voting v;
+		Voting memory v;
 		uint eId = PreserveBalancesOnTransferToken(tokenAddr).startNewEvent();
 		uint total = PreserveBalancesOnTransferToken(tokenAddr).totalSupply();		
 		v.votingType = VotingType.SetExitStake;
@@ -80,7 +80,7 @@ contract ProposalsContract {
 	 * @param _epochLength – value of epochLength param
 	 */
 	function setEpochLength(uint _epochLength) public onlyMultisigAddress {
-		Voting v;
+		Voting memory v;
 		uint eId = PreserveBalancesOnTransferToken(tokenAddr).startNewEvent();
 		uint total = PreserveBalancesOnTransferToken(tokenAddr).totalSupply();
 		v.votingType = VotingType.SetEpochLength;
@@ -131,9 +131,9 @@ contract ProposalsContract {
 	function _isVotingFinished(uint _votingIndex) internal returns(bool isFin) {
 		require(_votingIndex<votings.length);
 
-		uint a = QUORUM_PERCENT * votings[_votingIndex].totalSupplyAtEvent;
-		uint b = (votings[_votingIndex].pro + votings[_votingIndex].versus) * 100;
-		isFin = (b >= a);
+		uint total = votings[_votingIndex].totalSupplyAtEvent;
+		uint votesSum = votings[_votingIndex].pro + votings[_votingIndex].versus;
+		isFin = (votesSum*100 >= total*QUORUM_PERCENT);
 	}
 
 	/**
@@ -144,10 +144,13 @@ contract ProposalsContract {
 	 */
 	function _isVotingResultYes(uint _votingIndex) internal view returns(bool isYes) {
 		require(_votingIndex<votings.length);
-		isYes = (votings[_votingIndex].versus <= ((100-CONSENSUS_PERCENT)*votings[_votingIndex].pro));
+		if(votings[_votingIndex].versus==votings[_votingIndex].pro) {
+			isYes = false;
+		} else {
+			isYes = (CONSENSUS_PERCENT*votings[_votingIndex].versus <= ((100-CONSENSUS_PERCENT)*votings[_votingIndex].pro));
+		}
 	}
 	
-
 	/**
 	 * @dev Vote YES or NO
 	 * @param _votingIndex – voting number
@@ -173,7 +176,7 @@ contract ProposalsContract {
 		// 2 - if voting is finished (last caller) AND the result is YES -> call the target method 
 		if(_isVotingFinished(_votingIndex) && _isVotingResultYes(_votingIndex)){
 			emit VotingFinished();
-
+ 
 			if(votings[_votingIndex].votingType==VotingType.SetExitStake){
 				IBridgeContract(bridgeAddr).setExitStake(votings[_votingIndex].param);
 			}else if(votings[_votingIndex].votingType==VotingType.SetEpochLength) {

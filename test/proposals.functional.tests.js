@@ -36,8 +36,7 @@ contract('ProposalsContract', (accounts) => {
 			await preserveBalancesOnTransferToken.mint(u1, 1e18);
 			await preserveBalancesOnTransferToken.mint(u2, 1e18);
 			await preserveBalancesOnTransferToken.mint(u3, 1e18);
-			await preserveBalancesOnTransferToken.mint(u4, 1e18);
-			await preserveBalancesOnTransferToken.mint(u5, 1e18);
+			await preserveBalancesOnTransferToken.mint(u4, 1e18);			
 
 			bridgeTestable = await BridgeTestable.new();
 			proposalsContract = await ProposalsContract.new(bridgeTestable.address, preserveBalancesOnTransferToken.address, creator);
