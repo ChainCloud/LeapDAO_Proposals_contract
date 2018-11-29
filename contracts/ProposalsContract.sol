@@ -1,8 +1,6 @@
 pragma solidity ^0.4.24;
 
 import "@thetta/core/contracts/tokens/PreserveBalancesOnTransferToken.sol";
-import "@thetta/core/contracts/tokens/SnapshotToken.sol";
-
 import "./IBridgeContract.sol";
 
 
@@ -12,7 +10,7 @@ import "./IBridgeContract.sol";
  * See https://github.com/leapdao/leap-contracts/blob/master/contracts/LeapBridge.sol
  */
 contract ProposalsContract {
-	IBridgeContract public bridgeAddr;
+	IBridgeContract public bridgeTestable;
 	address public multisigAddress;
 	PreserveBalancesOnTransferToken public token;
 
@@ -45,14 +43,14 @@ contract ProposalsContract {
 	}
 
 	/**
-	 * @notice _bridgeAddr SHOULD CALL transferOwnership() to THIS contract!
-	 * @param _bridgeAddr – address of the bridge contract (that we will control)
+	 * @notice _bridgeTestable SHOULD CALL transferOwnership() to THIS contract!
+	 * @param _bridgeTestable – address of the bridge contract (that we will control)
 	 * @param _token – address of the main DAO token
 	 * @param _multisigAddress – address of the mulitisig contract (that controls us)
 	 */
-	constructor(IBridgeContract _bridgeAddr, PreserveBalancesOnTransferToken _token, address _multisigAddress) public {
+	constructor(IBridgeContract _bridgeTestable, PreserveBalancesOnTransferToken _token, address _multisigAddress) public {
 		multisigAddress = _multisigAddress;
-		bridgeAddr = _bridgeAddr;
+		bridgeTestable = _bridgeTestable;
 		token = _token;
 	}
 
@@ -79,7 +77,7 @@ contract ProposalsContract {
 	 * @notice This function creates voting
 	 * @param _epochLength – value of epochLength param
 	 */
-	function setEpochLength(uint256 _epochLength) public onlyMultisigAddress {
+	function setEpochLength(uint _epochLength) public onlyMultisigAddress {
 		Voting memory v;
 		v.votingType = VotingType.SetEpochLength;
 		v.param = _epochLength;
@@ -129,9 +127,9 @@ contract ProposalsContract {
 	function _isVotingFinished(uint _votingIndex) internal returns(bool isFin) {
 		require(_votingIndex<votings.length);
 
-		uint a = QUORUM_PERCENT * votings[_votingIndex].totalSupplyAtEvent;
-		uint b = (votings[_votingIndex].pro + votings[_votingIndex].versus) * 100;
-		isFin = (b >= a);
+		uint total = votings[_votingIndex].totalSupplyAtEvent;
+		uint votesSum = votings[_votingIndex].pro + votings[_votingIndex].versus;
+		isFin = (votesSum*100 >= total*QUORUM_PERCENT);
 	}
 
 	/**
@@ -142,50 +140,41 @@ contract ProposalsContract {
 	 */
 	function _isVotingResultYes(uint _votingIndex) internal view returns(bool isYes) {
 		require(_votingIndex<votings.length);
-		isYes = (votings[_votingIndex].versus <= ((100-CONSENSUS_PERCENT)*votings[_votingIndex].pro));
+		if(votings[_votingIndex].versus==votings[_votingIndex].pro) {
+			isYes = false;
+		} else {
+			isYes = (CONSENSUS_PERCENT*votings[_votingIndex].versus <= ((100-CONSENSUS_PERCENT)*votings[_votingIndex].pro));
+		}
 	}
-
-	/**
-	 * @dev Has token holder already voted?
-	 * @param _votingIndex – voting number
-	 * @param _a – potential voter address
-	 * @return Has voted or not
-	 */
-	function _isVoted(uint _votingIndex, address _a) internal view returns(bool isVoted) {
-		require(_votingIndex<votings.length);
-		isVoted = votings[_votingIndex].voted[_a];
-	}	
-
+	
 	/**
 	 * @dev Vote YES or NO
 	 * @param _votingIndex – voting number
-	 * @param _votingIndexsYes – voters opinion
+	 * @param _isYes – voters opinion
 	 */
-	function vote(uint _votingIndex, bool _votingIndexsYes) public {
+	function vote(uint _votingIndex, bool _isYes) public {
 		require(_votingIndex<votings.length);
 		require(!_isVotingFinished(_votingIndex));
-
-		uint tokenHolderBalance = token.getBalanceAtEventStart(votings[_votingIndex].eventId, msg.sender);
-		require(0!=tokenHolderBalance);
-		require(!_isVoted(_votingIndex, msg.sender));
+		require(0!=token.getBalanceAtEventStart(votings[_votingIndex].eventId, msg.sender));
+		require(!votings[_votingIndex].voted[msg.sender]);
 
 		votings[_votingIndex].voted[msg.sender] = true;
 
 		// 1 - recalculate stats
-		if(_votingIndexsYes){
-			votings[_votingIndex].pro += tokenHolderBalance;
+		if(_isYes){
+			votings[_votingIndex].pro += token.getBalanceAtEventStart(votings[_votingIndex].eventId, msg.sender);
 		}else{
-			votings[_votingIndex].versus += tokenHolderBalance;
+			votings[_votingIndex].versus += token.getBalanceAtEventStart(votings[_votingIndex].eventId, msg.sender);
 		}
 		
 		// 2 - if voting is finished (last caller) AND the result is YES -> call the target method 
 		if(_isVotingFinished(_votingIndex) && _isVotingResultYes(_votingIndex)){
 			emit VotingFinished();
-
+ 
 			if(votings[_votingIndex].votingType==VotingType.SetExitStake){
-				bridgeAddr.setExitStake(votings[_votingIndex].param);
+				bridgeTestable.setExitStake(votings[_votingIndex].param);
 			}else if(votings[_votingIndex].votingType==VotingType.SetEpochLength) {
-				bridgeAddr.setEpochLength(votings[_votingIndex].param);		
+				bridgeTestable.setEpochLength(votings[_votingIndex].param);		
 			}
 
 			token.finishEvent(votings[_votingIndex].eventId);
