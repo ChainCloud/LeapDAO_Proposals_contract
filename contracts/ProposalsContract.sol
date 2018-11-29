@@ -10,7 +10,7 @@ import "./IBridgeContract.sol";
  * See https://github.com/leapdao/leap-contracts/blob/master/contracts/LeapBridge.sol
  */
 contract ProposalsContract {
-	IBridgeContract public bridgeTestable;
+	IBridgeContract public bridge;
 	address public multisigAddress;
 	PreserveBalancesOnTransferToken public token;
 
@@ -43,14 +43,14 @@ contract ProposalsContract {
 	}
 
 	/**
-	 * @notice _bridgeTestable SHOULD CALL transferOwnership() to THIS contract!
-	 * @param _bridgeTestable – address of the bridge contract (that we will control)
+	 * @notice _bridge SHOULD CALL transferOwnership() to THIS contract!
+	 * @param _bridge – address of the bridge contract (that we will control)
 	 * @param _token – address of the main DAO token
 	 * @param _multisigAddress – address of the mulitisig contract (that controls us)
 	 */
-	constructor(IBridgeContract _bridgeTestable, PreserveBalancesOnTransferToken _token, address _multisigAddress) public {
+	constructor(IBridgeContract _bridge, PreserveBalancesOnTransferToken _token, address _multisigAddress) public {
 		multisigAddress = _multisigAddress;
-		bridgeTestable = _bridgeTestable;
+		bridge = _bridge;
 		token = _token;
 	}
 
@@ -172,9 +172,9 @@ contract ProposalsContract {
 			emit VotingFinished();
  
 			if(votings[_votingIndex].votingType==VotingType.SetExitStake){
-				bridgeTestable.setExitStake(votings[_votingIndex].param);
+				bridge.setExitStake(votings[_votingIndex].param);
 			}else if(votings[_votingIndex].votingType==VotingType.SetEpochLength) {
-				bridgeTestable.setEpochLength(votings[_votingIndex].param);		
+				bridge.setEpochLength(votings[_votingIndex].param);		
 			}
 
 			token.finishEvent(votings[_votingIndex].eventId);
