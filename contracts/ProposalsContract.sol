@@ -62,7 +62,7 @@ contract ProposalsContract {
 	 * @param _exitStake – value of exitStake param
 	 */
 	function setExitStake(uint256 _exitStake) public onlyMultisigAddress {
-		Voting v;
+		Voting memory v;
 		v.votingType = VotingType.SetExitStake;
 		v.param = _exitStake;
 		v.eventId = token.startNewEvent();
@@ -80,7 +80,7 @@ contract ProposalsContract {
 	 * @param _epochLength – value of epochLength param
 	 */
 	function setEpochLength(uint256 _epochLength) public onlyMultisigAddress {
-		Voting v;
+		Voting memory v;
 		v.votingType = VotingType.SetEpochLength;
 		v.param = _epochLength;
 		v.eventId = token.startNewEvent();
